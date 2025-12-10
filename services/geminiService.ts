@@ -1,9 +1,34 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Team, Player, MatchResult, Coach, PositionType } from '../types';
 
-// IMPORTANT: The system requires using @google/genai. 
-// Ensure process.env.API_KEY is set in your environment variables.
-const apiKey = process.env.API_KEY || 'dummy-key-for-ui-dev-mode';
+// Fonction sécurisée pour récupérer la clé API quel que soit l'environnement (Vite, CRA, Node)
+const getApiKey = (): string => {
+  // 1. Essai Vite (import.meta.env)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+      // @ts-ignore
+      return import.meta.env.VITE_API_KEY;
+    }
+  } catch (e) {
+    // Ignore les erreurs si import.meta n'existe pas
+  }
+
+  // 2. Essai Standard (process.env pour CRA/Webpack)
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env.API_KEY) return process.env.API_KEY;
+      if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
+    }
+  } catch (e) {
+    // Ignore
+  }
+
+  console.warn("Aucune clé API trouvée. L'IA utilisera des réponses simulées.");
+  return 'dummy-key-for-ui-dev-mode';
+};
+
+const apiKey = getApiKey();
 
 const ai = new GoogleGenAI({ apiKey });
 
@@ -135,7 +160,7 @@ export const geminiService = {
 
     } catch (error) {
       console.error("AI Analysis Failed", error);
-      return { score: 5, analysis: "Impossible de connecter à l'IA. Vérifiez la clé API." };
+      return { score: 5, analysis: "Impossible de connecter à l'IA. Vérifiez la clé API (VITE_API_KEY sur Vercel)." };
     }
   },
 
@@ -169,21 +194,18 @@ export const geminiService = {
       });
 
       const text = response.text;
-      return text ? JSON.parse(text) : { 
-          scoreHome: 0, 
-          scoreAway: 0, 
-          summary: "Match annulé (Erreur technique).", 
-          highlights: [], 
-          mvp: "Aucun" 
-      };
+      if (!text) throw new Error("No response from AI");
+      return JSON.parse(text);
 
     } catch (error) {
-       return { 
-          scoreHome: Math.floor(Math.random() * 3), 
-          scoreAway: Math.floor(Math.random() * 3), 
-          summary: "Simulation hors ligne. Résultat aléatoire.", 
-          highlights: ["10' - Coup d'envoi", "90' - Fin du match"], 
-          mvp: "Le Public" 
+      console.error("AI Match Sim Failed", error);
+      // Fallback
+      return {
+        scoreHome: Math.floor(Math.random() * 3),
+        scoreAway: Math.floor(Math.random() * 3),
+        summary: "Simulation IA indisponible. Match nul par défaut.",
+        highlights: ["Pas de connexion IA"],
+        mvp: "Inconnu"
       };
     }
   }

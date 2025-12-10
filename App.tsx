@@ -94,8 +94,8 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans pb-20">
-      {/* Dynamic Banner - Adjusted height and object position */}
-      <div className="relative h-80 w-full overflow-hidden group">
+      {/* Dynamic Banner - Added bg-gradient backup for visual safety */}
+      <div className="relative h-80 w-full overflow-hidden group bg-gradient-to-r from-emerald-900 to-gray-900">
         <img 
           src={profile.bannerUrl || DEFAULT_BANNER} 
           alt="Banner" 
