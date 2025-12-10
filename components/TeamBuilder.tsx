@@ -95,7 +95,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
           const canvas = await html2canvas(exportAreaRef.current, {
               backgroundColor: '#111827', // Dark background
               useCORS: true, // Crucial for external images (avatars)
-              allowTaint: true,
+              allowTaint: false, // Must be false to allow data URL generation
               scale: 2, // Better quality
           });
 
