@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LayoutDashboard, Users, Trophy, Settings, LogOut, Import, Download, User as UserIcon, Edit, RefreshCw } from 'lucide-react';
 import { storageService } from './services/storageService';
 import { UserProfile, Team, Player } from './types';
@@ -22,6 +22,9 @@ const App: React.FC = () => {
   // Modal State
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  // Ref pour l'input file caché
+  const fileImportRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     // Initial Load check
     const saved = storageService.getProfile();
@@ -42,21 +45,49 @@ const App: React.FC = () => {
     }
   };
 
-  const handleImport = () => {
-    const json = prompt("Coller le JSON ici:");
-    if (json) {
-      if (storageService.importAll(json)) {
-        alert("Données importées ! Rechargement...");
-        window.location.reload();
-      } else {
-        alert("JSON Invalide.");
-      }
-    }
+  // --- NOUVELLE LOGIQUE IMPORT FICHIER ---
+  const handleImportClick = () => {
+    fileImportRef.current?.click();
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content && storageService.importAll(content)) {
+        alert("Succès ! Vos données (Équipes, Joueurs, Profil) ont été restaurées.");
+        window.location.reload();
+      } else {
+        alert("Erreur : Le fichier JSON semble invalide ou corrompu.");
+      }
+    };
+    reader.readAsText(file);
+    // Reset pour permettre de réimporter le même fichier si besoin
+    event.target.value = '';
+  };
+
+  // --- NOUVELLE LOGIQUE EXPORT FICHIER ---
   const handleExport = () => {
     const data = storageService.exportAll();
-    navigator.clipboard.writeText(data).then(() => alert("Données copiées dans le presse-papier !"));
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    // Création d'un lien temporaire pour le téléchargement
+    const link = document.createElement('a');
+    link.href = url;
+    // Nom du fichier avec la date
+    const dateStr = new Date().toISOString().split('T')[0];
+    link.download = `NANI99_Backup_${dateStr}.json`;
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // Nettoyage
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const startBuilder = (teamId?: string) => {
@@ -159,13 +190,31 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Global Actions */}
+        {/* Global Actions (Import/Export File) */}
         <div className="absolute top-4 right-4 flex gap-2 z-30">
-          <button onClick={handleImport} className="p-2 bg-black/50 hover:bg-emerald-600 rounded text-white flex gap-2 items-center text-sm backdrop-blur-md transition-all border border-white/10">
-            <Import size={16} /> Import
+          {/* Input file caché pour l'import */}
+          <input 
+            type="file" 
+            ref={fileImportRef} 
+            onChange={handleFileChange} 
+            className="hidden" 
+            accept=".json" // Accepte uniquement les fichiers JSON
+          />
+          
+          <button 
+            onClick={handleImportClick} 
+            className="p-2 bg-black/50 hover:bg-emerald-600 rounded text-white flex gap-2 items-center text-sm backdrop-blur-md transition-all border border-white/10"
+            title="Importer un fichier de sauvegarde (.json)"
+          >
+            <Import size={16} /> <span className="hidden sm:inline">Import JSON</span>
           </button>
-          <button onClick={handleExport} className="p-2 bg-black/50 hover:bg-indigo-600 rounded text-white flex gap-2 items-center text-sm backdrop-blur-md transition-all border border-white/10">
-            <Download size={16} /> Export
+          
+          <button 
+            onClick={handleExport} 
+            className="p-2 bg-black/50 hover:bg-indigo-600 rounded text-white flex gap-2 items-center text-sm backdrop-blur-md transition-all border border-white/10"
+            title="Télécharger une sauvegarde (.json)"
+          >
+            <Download size={16} /> <span className="hidden sm:inline">Export JSON</span>
           </button>
         </div>
       </div>
