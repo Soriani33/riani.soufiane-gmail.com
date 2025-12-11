@@ -8,6 +8,7 @@ import { storageService } from '../services/storageService';
 import { geminiService } from '../services/geminiService';
 import Pitch from './Pitch';
 import PlayerModal from './PlayerModal';
+import PlayerDetailModal from './PlayerDetailModal';
 
 interface TeamBuilderProps {
   teamId: string | null;
@@ -29,8 +30,10 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
   const [coachForm, setCoachForm] = useState({ name: '', photoUrl: '', style: 'Balanced' });
   const [isGeneratingCoach, setIsGeneratingCoach] = useState(false);
 
+  // Modals Management
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   const [aiAnalysis, setAiAnalysis] = useState<{score: number, analysis: string} | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -122,9 +125,16 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
     setIsAnalyzing(false);
   };
 
+  // Click on Pitch Logic
   const handleSlotClick = (index: number) => {
     setSelectedSlot(index);
-    setIsModalOpen(true);
+    if (players[index]) {
+      // If player exists -> Detail View
+      setIsDetailModalOpen(true);
+    } else {
+      // If empty -> Selection View
+      setIsSelectionModalOpen(true);
+    }
   };
 
   const handlePlayerSelect = (p: Player) => {
@@ -132,6 +142,25 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
     const newPlayers = [...players];
     newPlayers[selectedSlot] = p;
     setPlayers(newPlayers);
+  };
+
+  // Remove player from Pitch (only)
+  const handleRemovePlayer = () => {
+    if (selectedSlot === null) return;
+    const newPlayers = [...players];
+    newPlayers[selectedSlot] = null;
+    setPlayers(newPlayers);
+    setIsDetailModalOpen(false);
+  };
+
+  // Update specific player instance on Pitch
+  const handleUpdatePlayer = (updatedPlayer: Player) => {
+    if (selectedSlot === null) return;
+    const newPlayers = [...players];
+    newPlayers[selectedSlot] = updatedPlayer;
+    setPlayers(newPlayers);
+    // Note: We do NOT save to storageService.savePlayer here to keep DB intact as requested.
+    // This allows unique customisation per team.
   };
 
   const handleGenerateCoach = async () => {
@@ -402,12 +431,22 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
         </div>
       </div>
 
+      {/* Modal Selection (Pool) */}
       <PlayerModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isSelectionModalOpen}
+        onClose={() => setIsSelectionModalOpen(false)}
         onSelect={handlePlayerSelect}
         positionIndex={selectedSlot || 0}
-        requiredType={selectedSlot === 0 ? 'GK' as any : undefined} // Simple logic: first slot is GK
+        requiredType={selectedSlot === 0 ? 'GK' as any : undefined} 
+      />
+
+      {/* Modal Details (View/Edit/Remove) */}
+      <PlayerDetailModal 
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        player={selectedSlot !== null ? players[selectedSlot] : null}
+        onRemove={handleRemovePlayer}
+        onUpdate={handleUpdatePlayer}
       />
     </div>
   );

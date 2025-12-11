@@ -313,7 +313,7 @@ const MatchSim: React.FC<MatchSimProps> = ({ onBack, preselectedHomeId }) => {
                         </div>
                         
                         <div className="text-center pt-8">
-                             <button onClick={() => setIsPlaying(false) || setResult(null)} className="flex items-center gap-2 mx-auto text-gray-400 hover:text-white">
+                             <button onClick={() => { setIsPlaying(false); setResult(null); }} className="flex items-center gap-2 mx-auto text-gray-400 hover:text-white">
                                 <RefreshCw /> Rejouer / Configurer
                              </button>
                         </div>

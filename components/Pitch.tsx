@@ -1,5 +1,5 @@
 import React from 'react';
-import { Player, Formation, Coordinates, Team } from '../types';
+import { Player, Formation, Coordinates } from '../types';
 import { getMirroredCoordinates, DEFAULT_AVATAR } from '../constants';
 
 interface PitchProps {
@@ -35,8 +35,8 @@ const Pitch: React.FC<PitchProps> = ({
         style={{ top: `${coords.top}%`, left: `${coords.left}%` }}
         onClick={() => onSlotClick && onSlotClick(index, isAway)}
       >
-        {/* Avatar: Increased size significantly as requested previously */}
-        <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full border-[3px] ${ringColor} bg-gray-900 overflow-hidden shadow-xl transition-transform duration-200 group-hover:scale-110 relative z-10`}>
+        {/* Avatar: Adjusted size */}
+        <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full border-[2px] md:border-[3px] ${ringColor} bg-gray-900 overflow-hidden shadow-xl transition-transform duration-200 group-hover:scale-110 relative z-10`}>
           {player ? (
             <img 
               src={player.photoUrl} 
@@ -45,27 +45,27 @@ const Pitch: React.FC<PitchProps> = ({
               onError={(e) => (e.currentTarget.src = DEFAULT_AVATAR)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold text-2xl hover:text-white transition-colors bg-black/40">+</div>
+            <div className="w-full h-full flex items-center justify-center text-gray-500 font-bold text-xl hover:text-white transition-colors bg-black/40">+</div>
           )}
         </div>
         
-        {/* Label: Reverted to cleaner, simpler style */}
+        {/* Label: Smaller and tighter to prevent overlap */}
         {showLabels && (
           <div className="mt-1 relative z-20 flex flex-col items-center">
             {player ? (
-               <div className="bg-black/70 backdrop-blur-sm px-3 py-0.5 rounded text-center min-w-[80px] border-b-2 border-transparent group-hover:border-white transition-all">
-                 <span className="block text-white font-teko text-lg md:text-xl leading-none tracking-wide uppercase shadow-black drop-shadow-md">
+               <div className="bg-black/80 backdrop-blur-sm px-1 py-0.5 rounded text-center min-w-[40px] max-w-[70px] border-b border-transparent group-hover:border-white transition-all overflow-hidden">
+                 <span className="block text-white font-teko text-sm md:text-base leading-none tracking-wide uppercase truncate shadow-black drop-shadow-md w-full">
                    {player.name}
                  </span>
                  {/* Optional: Show rating in small pill */}
-                 <div className="flex justify-center mt-[-2px]">
-                    <span className={`text-[10px] font-bold px-1 rounded ${isAway ? 'text-red-300' : 'text-emerald-300'}`}>
+                 <div className="flex justify-center mt-[-1px]">
+                    <span className={`text-[9px] font-bold px-1 rounded ${isAway ? 'text-red-300' : 'text-emerald-300'}`}>
                         {player.rating}
                     </span>
                  </div>
                </div>
             ) : (
-                <span className="text-xs bg-black/50 text-white px-2 py-0.5 rounded font-mono">
+                <span className="text-[9px] bg-black/50 text-white px-1.5 py-0.5 rounded font-mono">
                     {index === 0 ? 'GK' : 'POS'}
                 </span>
             )}

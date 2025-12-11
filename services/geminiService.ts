@@ -1,18 +1,54 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Team, Player, MatchResult, Coach, PositionType } from '../types';
 
-// Initialisation stricte utilisant la variable injectée par vite.config.ts
-// Si la clé est absente, cela ne plantera qu'au moment de l'appel API
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-// Helpers pour le fallback aléatoire si l'IA échoue
+// Helpers pour le fallback aléatoire (Mode Hors-Ligne)
 const randomStat = (min = 60, max = 90) => Math.floor(Math.random() * (max - min + 1)) + min;
 const randomRating = () => Math.floor(Math.random() * (92 - 75 + 1)) + 75;
+
+// Fonction de récupération sécurisée du client IA
+// On ne l'instancie que si nécessaire et si la clé existe
+const getAiClient = () => {
+  const key = process.env.API_KEY;
+  // Vérification stricte
+  if (!key || typeof key !== 'string' || key.length < 10 || key.includes("dummy")) {
+    // Silent fail ou log léger pour ne pas spammer la console
+    return null;
+  }
+  try {
+    return new GoogleGenAI({ apiKey: key });
+  } catch (error) {
+    console.warn("NANI99 - Erreur d'initialisation SDK:", error);
+    return null;
+  }
+};
+
+console.log("NANI99 - Gemini Service Ready (Lazy Mode)");
 
 export const geminiService = {
   
   // 1. Generate Player Stats/Info
   generatePlayerInfo: async (name: string): Promise<Partial<Player>> => {
+    const ai = getAiClient();
+
+    // Si pas d'IA dispo, on passe direct au fallback sans erreur
+    if (!ai) {
+      console.log("Mode Hors-Ligne: Génération aléatoire pour", name);
+      return {
+        name: name,
+        rating: randomRating(),
+        type: PositionType.MID,
+        position: 'CM',
+        stats: { 
+            pace: randomStat(), 
+            shooting: randomStat(), 
+            passing: randomStat(), 
+            dribbling: randomStat(), 
+            defending: randomStat(), 
+            physical: randomStat() 
+        }
+      };
+    }
+
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
@@ -56,12 +92,11 @@ export const geminiService = {
       });
       
       const text = response.text;
-      if (!text) throw new Error("No response from AI");
+      if (!text) throw new Error("Empty response from AI");
       return JSON.parse(text);
 
     } catch (error) {
-      console.warn("AI Player Generation Failed (Using Random Fallback):", error);
-      // Fallback plus réaliste et aléatoire
+      console.warn("AI Request Failed (Using Fallback):", error);
       return {
         name: name,
         rating: randomRating(),
@@ -81,6 +116,17 @@ export const geminiService = {
 
   // 1.5 Generate Coach Info
   generateCoachInfo: async (name: string): Promise<Partial<Coach>> => {
+    const ai = getAiClient();
+    
+    // Fallback par défaut
+    const fallbackCoach = {
+        name: name,
+        tacticalStyle: ['Offensif', 'Défensif', 'Possession', 'Contre-Attaque'][Math.floor(Math.random()*4)],
+        nationality: 'Internationale'
+    };
+
+    if (!ai) return fallbackCoach;
+
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
@@ -101,21 +147,25 @@ export const geminiService = {
       });
       
       const text = response.text;
-      if (!text) throw new Error("No response from AI");
+      if (!text) throw new Error("Empty response from AI");
       return JSON.parse(text);
 
     } catch (error) {
-      console.error("AI Coach Generation Failed:", error);
-      return {
-        name: name,
-        tacticalStyle: ['Offensif', 'Défensif', 'Possession', 'Contre-Attaque'][Math.floor(Math.random()*4)],
-        nationality: 'Internationale'
-      };
+      return fallbackCoach;
     }
   },
 
   // 2. Analyze Formation
   analyzeFormation: async (team: Team): Promise<{ score: number, analysis: string }> => {
+    const ai = getAiClient();
+    
+    if (!ai) {
+        return { 
+            score: Math.floor(Math.random() * 3) + 6, 
+            analysis: "Mode Hors-Ligne : Votre formation semble équilibrée. Pour une analyse détaillée par l'IA, veuillez configurer une Clé API valide." 
+        };
+    }
+
     try {
       const playersList = team.players.map((p, i) => p ? `${p.position} (${p.rating}): ${p.name}` : `Pos ${i+1}: Vide`).join(', ');
       
@@ -140,19 +190,32 @@ export const geminiService = {
       });
 
       const text = response.text;
-      return text ? JSON.parse(text) : { score: 0, analysis: "Analyse IA indisponible." };
+      return text ? JSON.parse(text) : { score: 5, analysis: "Erreur d'analyse." };
 
     } catch (error) {
       console.error("AI Analysis Failed", error);
       return { 
-          score: Math.floor(Math.random() * 3) + 5, // Score aléatoire entre 5 et 8
-          analysis: "Impossible de connecter à l'IA pour une analyse détaillée. Vérifiez que votre clé API est bien configurée dans Vercel (Variable: API_KEY). En attendant, assurez-vous que vos joueurs sont bien positionnés." 
+          score: Math.floor(Math.random() * 3) + 5, 
+          analysis: "L'IA n'a pas pu analyser l'équipe. Vérifiez votre connexion." 
       };
     }
   },
 
   // 3. Simulate Match
   simulateMatch: async (home: Team, away: Team): Promise<MatchResult> => {
+    const ai = getAiClient();
+    
+    // Fallback Simulation
+    const fallbackSim = {
+        scoreHome: Math.floor(Math.random() * 4),
+        scoreAway: Math.floor(Math.random() * 3),
+        summary: "Match simulé en mode hors-ligne. Les deux équipes se sont bien battues.",
+        highlights: [`${Math.floor(Math.random()*20)+10}' Tir dangereux`, `${Math.floor(Math.random()*30)+50}' Contre-attaque rapide`],
+        mvp: home.players[0]?.name || "Le Gardien"
+    };
+
+    if (!ai) return fallbackSim;
+
     try {
       const homeData = JSON.stringify(home.players.map(p => p ? p.name : 'Inconnu'));
       const awayData = JSON.stringify(away.players.map(p => p ? p.name : 'Inconnu'));
@@ -181,21 +244,12 @@ export const geminiService = {
       });
 
       const text = response.text;
-      if (!text) throw new Error("No response from AI");
+      if (!text) throw new Error("Empty response from AI");
       return JSON.parse(text);
 
     } catch (error) {
       console.error("AI Match Sim Failed", error);
-      // Fallback
-      const sH = Math.floor(Math.random() * 4);
-      const sA = Math.floor(Math.random() * 4);
-      return {
-        scoreHome: sH,
-        scoreAway: sA,
-        summary: "Mode Simulation Hors-Ligne (Clé API manquante). Le match s'est joué sur un rythme intense.",
-        highlights: [`${Math.floor(Math.random()*20)+10}' Occasion dangereuse`, `${Math.floor(Math.random()*30)+50}' Arrêt décisif du gardien`],
-        mvp: home.players[0]?.name || "Le Gardien"
-      };
+      return fallbackSim;
     }
   }
 };
