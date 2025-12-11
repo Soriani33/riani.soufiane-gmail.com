@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Play, Users, Trash2, AlertTriangle, Database } from 'lucide-react';
+import { Plus, Play, Users, Trash2, AlertTriangle, Database, Briefcase } from 'lucide-react';
 import { storageService } from '../services/storageService';
 import { hasApiKey } from '../services/geminiService';
 import { Team } from '../types';
@@ -45,9 +45,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch, onO
         </div>
       )}
 
-      {/* Hero Actions */}
+      {/* Hero Actions - 3 Columns Layout */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Builder Card */}
+        
+        {/* Card 1: Builder */}
         <div 
           onClick={() => onStartBuilder()}
           className="group relative h-56 rounded-2xl overflow-hidden cursor-pointer border border-gray-700 hover:border-emerald-500 transition-all shadow-2xl"
@@ -67,7 +68,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch, onO
           </div>
         </div>
 
-        {/* Match Card */}
+        {/* Card 2: Match */}
         <div 
           onClick={onStartMatch}
           className="group relative h-56 rounded-2xl overflow-hidden cursor-pointer border border-gray-700 hover:border-indigo-500 transition-all shadow-2xl"
@@ -87,7 +88,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch, onO
           </div>
         </div>
 
-        {/* Database Card */}
+        {/* Card 3: Database (FORCED UPDATE) */}
         <div 
           onClick={onOpenDatabase}
           className="group relative h-56 rounded-2xl overflow-hidden cursor-pointer border border-gray-700 hover:border-blue-500 transition-all shadow-2xl"
@@ -99,13 +100,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch, onO
           />
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent"></div>
           <div className="absolute bottom-6 left-6">
-            <h2 className="text-4xl font-teko font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">GESTION JOUEURS</h2>
-            <p className="text-gray-300 text-sm">Ajouter, Modifier, Supprimer.</p>
+            <h2 className="text-4xl font-teko font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">BASE DE DONNÉES</h2>
+            <p className="text-gray-300 text-sm">Gérez Joueurs & <span className="text-yellow-400 font-bold">Coachs</span>.</p>
           </div>
-           <div className="absolute top-4 right-4 bg-blue-500 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
-            <Database size={24} className="text-white" />
+          {/* Nouveau Badge Visible */}
+          <div className="absolute top-4 right-4 bg-blue-600 text-white p-2 rounded-full shadow-lg group-hover:bg-blue-500 transition-colors">
+             <Database size={24} />
           </div>
         </div>
+
       </div>
 
       {/* Saved Teams */}
@@ -135,6 +138,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch, onO
                   <div className="flex-1 min-w-0">
                     <h4 className="font-teko text-2xl text-white leading-none truncate">{team.name}</h4>
                     <span className="text-xs text-emerald-400 uppercase tracking-wider">{team.formationName}</span>
+                    {team.coach && (
+                         <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
+                            <Briefcase size={10} />
+                            <span className="truncate">{team.coach.name}</span>
+                         </div>
+                    )}
                   </div>
                 </div>
                 

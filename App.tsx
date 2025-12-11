@@ -29,6 +29,7 @@ const App: React.FC = () => {
     // Initial Load check
     const saved = storageService.getProfile();
     setProfile(saved);
+    console.log("NANI99 v1.4 Loaded"); // Debug info
   }, []);
 
   const handleSaveProfile = (updatedProfile: UserProfile) => {
@@ -223,6 +224,13 @@ const App: React.FC = () => {
       <main className="container mx-auto px-4 mt-8">
         {renderView()}
       </main>
+
+      {/* Footer Version Indicator - FORCED UPDATE V1.4 */}
+      <div className="text-center py-6 text-gray-600 text-xs font-mono uppercase tracking-widest border-t border-gray-800 mt-12 flex justify-center gap-4">
+          <span>NANI99 v1.4</span>
+          <span>•</span>
+          <span className="text-green-500">LIVE SYNC ACTIVE</span>
+      </div>
 
       {/* Profile Modal */}
       <ProfileModal 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Save, Sparkles, User, RefreshCw, Shirt, Image as ImageIcon, Plus, Wand2, Swords, Camera, Download } from 'lucide-react';
+import { ChevronLeft, Save, Sparkles, User, RefreshCw, Shirt, Image as ImageIcon, Plus, Wand2, Swords, Camera, Download, Users, X } from 'lucide-react';
 // @ts-ignore
 import html2canvas from 'html2canvas';
 import { Team, Player, Formation, Coach } from '../types';
@@ -9,6 +9,7 @@ import { geminiService } from '../services/geminiService';
 import Pitch from './Pitch';
 import PlayerModal from './PlayerModal';
 import PlayerDetailModal from './PlayerDetailModal';
+import CoachSelectionModal from './CoachSelectionModal';
 
 interface TeamBuilderProps {
   teamId: string | null;
@@ -25,15 +26,11 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
   const [coach, setCoach] = useState<Coach | undefined>(undefined);
   const [logoUrl, setLogoUrl] = useState('');
   
-  // Coach Form State
-  const [showCoachForm, setShowCoachForm] = useState(false);
-  const [coachForm, setCoachForm] = useState({ name: '', photoUrl: '', style: 'Balanced' });
-  const [isGeneratingCoach, setIsGeneratingCoach] = useState(false);
-
   // Modals Management
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isCoachSelectionOpen, setIsCoachSelectionOpen] = useState(false);
   
   const [aiAnalysis, setAiAnalysis] = useState<{score: number, analysis: string} | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -159,32 +156,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
     const newPlayers = [...players];
     newPlayers[selectedSlot] = updatedPlayer;
     setPlayers(newPlayers);
-    // Note: We do NOT save to storageService.savePlayer here to keep DB intact as requested.
-    // This allows unique customisation per team.
-  };
-
-  const handleGenerateCoach = async () => {
-    if (!coachForm.name) return;
-    setIsGeneratingCoach(true);
-    const data = await geminiService.generateCoachInfo(coachForm.name);
-    setCoachForm(prev => ({
-        ...prev,
-        name: data.name || prev.name,
-        style: data.tacticalStyle || prev.style
-    }));
-    setIsGeneratingCoach(false);
-  };
-
-  const handleAddCoach = () => {
-    if (!coachForm.name) return;
-    setCoach({
-        id: Date.now().toString(),
-        name: coachForm.name,
-        photoUrl: coachForm.photoUrl || DEFAULT_AVATAR,
-        tacticalStyle: coachForm.style
-    });
-    setShowCoachForm(false);
-    setCoachForm({ name: '', photoUrl: '', style: 'Balanced' });
   };
 
   return (
@@ -273,81 +244,28 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
 
           <div className="glass-panel p-6 rounded-xl">
             <h3 className="text-xl font-teko text-yellow-400 mb-4 flex items-center gap-2"><User size={20} /> Coach</h3>
+            
             {coach ? (
-               <div className="flex items-center gap-3 animate-fade-in">
+               <div className="flex items-center gap-3 animate-fade-in bg-gray-800/50 p-2 rounded-lg border border-gray-700">
                  <div className="w-14 h-14 flex-shrink-0 rounded-full bg-gray-700 overflow-hidden border-2 border-yellow-500">
                     <img src={coach.photoUrl} className="w-full h-full object-cover" onError={(e) => e.currentTarget.src = DEFAULT_AVATAR} />
                  </div>
                  <div className="flex-1 min-w-0">
-                   <p className="font-bold leading-none truncate text-lg">{coach.name}</p>
-                   <p className="text-xs text-gray-400 truncate">{coach.tacticalStyle}</p>
+                   <p className="font-bold leading-none truncate text-lg text-white">{coach.name}</p>
+                   <p className="text-xs text-yellow-500 truncate">{coach.tacticalStyle}</p>
                  </div>
-                 <button onClick={() => setCoach(undefined)} className="ml-auto text-red-400 hover:text-red-300 text-xs uppercase font-bold tracking-wider">X</button>
+                 <div className="flex flex-col gap-1">
+                     <button onClick={() => setIsCoachSelectionOpen(true)} className="text-gray-400 hover:text-white"><RefreshCw size={14}/></button>
+                     <button onClick={() => setCoach(undefined)} className="text-red-400 hover:text-red-300"><X size={14}/></button>
+                 </div>
                </div>
-            ) : showCoachForm ? (
-                <div className="space-y-4 animate-fade-in">
-                    <div>
-                        <label className="block text-xs text-gray-400 mb-1">Nom</label>
-                        <div className="flex gap-2 mb-3">
-                            <input 
-                                placeholder="ex: Pep Guardiola"
-                                className="flex-1 bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-sm"
-                                value={coachForm.name}
-                                onChange={e => setCoachForm({...coachForm, name: e.target.value})}
-                            />
-                            <button 
-                                onClick={handleGenerateCoach}
-                                disabled={isGeneratingCoach || !coachForm.name}
-                                className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 rounded flex items-center justify-center disabled:opacity-50"
-                                title="Auto-Fill IA"
-                            >
-                                {isGeneratingCoach ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> : <Wand2 size={16} />}
-                            </button>
-                        </div>
-                        
-                        <label className="block text-xs text-gray-400 mb-1">URL Avatar (Optionnel)</label>
-                        <div className="flex gap-2 mb-3">
-                             <input 
-                                placeholder="https://..."
-                                className="flex-1 bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-sm"
-                                value={coachForm.photoUrl}
-                                onChange={e => setCoachForm({...coachForm, photoUrl: e.target.value})}
-                            />
-                            <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden border border-gray-600 flex-shrink-0">
-                                {coachForm.photoUrl ? (
-                                    <img src={coachForm.photoUrl} className="w-full h-full object-cover" onError={e => e.currentTarget.style.display='none'} />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-gray-500"><ImageIcon size={12} /></div>
-                                )}
-                            </div>
-                        </div>
-
-                        <label className="block text-xs text-gray-400 mb-1">Style Tactique</label>
-                        <select
-                            className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-sm"
-                            value={coachForm.style}
-                            onChange={e => setCoachForm({...coachForm, style: e.target.value})}
-                        >
-                            <option value="Équilibré">Équilibré</option>
-                            <option value="Attaque">Attaque</option>
-                            <option value="Défensif">Défensif</option>
-                            <option value="Gegenpressing">Gegenpressing</option>
-                            <option value="Tiki-Taka">Tiki-Taka</option>
-                            <option value="Contre-Attaque">Contre-Attaque</option>
-                            <option value="Park the Bus">Park the Bus</option>
-                        </select>
-                    </div>
-                    <div className="flex gap-2">
-                        <button onClick={handleAddCoach} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded text-sm font-teko uppercase tracking-wide">Ajouter</button>
-                        <button onClick={() => setShowCoachForm(false)} className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded text-sm font-teko uppercase tracking-wide">Annuler</button>
-                    </div>
-                </div>
             ) : (
                <button 
-                onClick={() => setShowCoachForm(true)}
-                className="w-full border border-dashed border-gray-600 rounded py-4 text-gray-400 hover:border-yellow-500 hover:text-yellow-500 transition-colors flex items-center justify-center gap-2 group"
+                onClick={() => setIsCoachSelectionOpen(true)}
+                className="w-full border border-dashed border-gray-600 rounded py-6 text-gray-400 hover:border-yellow-500 hover:text-yellow-500 transition-colors flex flex-col items-center justify-center gap-2 group bg-gray-800/20"
                >
-                 <Plus className="group-hover:scale-110 transition-transform" /> Ajouter Coach
+                 <Users className="group-hover:scale-110 transition-transform" /> 
+                 <span className="font-teko text-xl">CHOISIR COACH</span>
                </button>
             )}
           </div>
@@ -447,6 +365,13 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
         player={selectedSlot !== null ? players[selectedSlot] : null}
         onRemove={handleRemovePlayer}
         onUpdate={handleUpdatePlayer}
+      />
+
+      {/* Modal Coach Selection */}
+      <CoachSelectionModal 
+        isOpen={isCoachSelectionOpen}
+        onClose={() => setIsCoachSelectionOpen(false)}
+        onSelect={(c) => setCoach(c)}
       />
     </div>
   );
