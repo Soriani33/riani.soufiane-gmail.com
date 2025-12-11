@@ -1,36 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Team, Player, MatchResult, Coach, PositionType } from '../types';
 
-// Fonction sécurisée pour récupérer la clé API quel que soit l'environnement (Vite, CRA, Node)
-const getApiKey = (): string => {
-  // 1. Essai Vite (import.meta.env)
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
-      // @ts-ignore
-      return import.meta.env.VITE_API_KEY;
-    }
-  } catch (e) {
-    // Ignore les erreurs si import.meta n'existe pas
-  }
+// Initialisation stricte utilisant la variable injectée par vite.config.ts
+// Si la clé est absente, cela ne plantera qu'au moment de l'appel API
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  // 2. Essai Standard (process.env pour CRA/Webpack)
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      if (process.env.API_KEY) return process.env.API_KEY;
-      if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
-    }
-  } catch (e) {
-    // Ignore
-  }
-
-  console.warn("Aucune clé API trouvée. L'IA utilisera des réponses simulées.");
-  return 'dummy-key-for-ui-dev-mode';
-};
-
-const apiKey = getApiKey();
-
-const ai = new GoogleGenAI({ apiKey });
+// Helpers pour le fallback aléatoire si l'IA échoue
+const randomStat = (min = 60, max = 90) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomRating = () => Math.floor(Math.random() * (92 - 75 + 1)) + 75;
 
 export const geminiService = {
   
@@ -83,14 +60,21 @@ export const geminiService = {
       return JSON.parse(text);
 
     } catch (error) {
-      console.error("AI Player Generation Failed:", error);
-      // Fallback for dev mode without key
+      console.warn("AI Player Generation Failed (Using Random Fallback):", error);
+      // Fallback plus réaliste et aléatoire
       return {
         name: name,
-        rating: 75,
+        rating: randomRating(),
         type: PositionType.MID,
         position: 'CM',
-        stats: { pace: 70, shooting: 70, passing: 70, dribbling: 70, defending: 70, physical: 70 }
+        stats: { 
+            pace: randomStat(), 
+            shooting: randomStat(), 
+            passing: randomStat(), 
+            dribbling: randomStat(), 
+            defending: randomStat(), 
+            physical: randomStat() 
+        }
       };
     }
   },
@@ -124,8 +108,8 @@ export const geminiService = {
       console.error("AI Coach Generation Failed:", error);
       return {
         name: name,
-        tacticalStyle: 'Équilibré',
-        nationality: 'Inconnue'
+        tacticalStyle: ['Offensif', 'Défensif', 'Possession', 'Contre-Attaque'][Math.floor(Math.random()*4)],
+        nationality: 'Internationale'
       };
     }
   },
@@ -160,7 +144,10 @@ export const geminiService = {
 
     } catch (error) {
       console.error("AI Analysis Failed", error);
-      return { score: 5, analysis: "Impossible de connecter à l'IA. Vérifiez la clé API (VITE_API_KEY sur Vercel)." };
+      return { 
+          score: Math.floor(Math.random() * 3) + 5, // Score aléatoire entre 5 et 8
+          analysis: "Impossible de connecter à l'IA pour une analyse détaillée. Vérifiez que votre clé API est bien configurée dans Vercel (Variable: API_KEY). En attendant, assurez-vous que vos joueurs sont bien positionnés." 
+      };
     }
   },
 
@@ -200,12 +187,14 @@ export const geminiService = {
     } catch (error) {
       console.error("AI Match Sim Failed", error);
       // Fallback
+      const sH = Math.floor(Math.random() * 4);
+      const sA = Math.floor(Math.random() * 4);
       return {
-        scoreHome: Math.floor(Math.random() * 3),
-        scoreAway: Math.floor(Math.random() * 3),
-        summary: "Simulation IA indisponible. Match nul par défaut.",
-        highlights: ["Pas de connexion IA"],
-        mvp: "Inconnu"
+        scoreHome: sH,
+        scoreAway: sA,
+        summary: "Mode Simulation Hors-Ligne (Clé API manquante). Le match s'est joué sur un rythme intense.",
+        highlights: [`${Math.floor(Math.random()*20)+10}' Occasion dangereuse`, `${Math.floor(Math.random()*30)+50}' Arrêt décisif du gardien`],
+        mvp: home.players[0]?.name || "Le Gardien"
       };
     }
   }
