@@ -1,5 +1,6 @@
 import { Player, Team, Coach, Ball, UserProfile } from '../types';
 import { DEFAULT_BANNER, DEFAULT_AVATAR } from '../constants';
+import { INITIAL_PLAYERS, INITIAL_COACHES } from '../constants/initialData';
 
 const KEYS = {
   PLAYERS: 'nani99_players',
@@ -38,7 +39,15 @@ export const storageService = {
   },
 
   // Players
-  getPlayers: (): Player[] => safeGet(KEYS.PLAYERS, []),
+  getPlayers: (): Player[] => {
+      const players = safeGet<Player[]>(KEYS.PLAYERS, []);
+      // SEEDING AUTOMATIQUE : Si vide, on injecte les données initiales
+      if (players.length === 0) {
+          safeSet(KEYS.PLAYERS, INITIAL_PLAYERS);
+          return INITIAL_PLAYERS;
+      }
+      return players;
+  },
   savePlayer: (player: Player) => {
     const players = storageService.getPlayers();
     const existing = players.findIndex(p => p.id === player.id);
@@ -55,7 +64,14 @@ export const storageService = {
   },
 
   // Coaches
-  getCoaches: (): Coach[] => safeGet(KEYS.COACHES, []),
+  getCoaches: (): Coach[] => {
+      const coaches = safeGet<Coach[]>(KEYS.COACHES, []);
+      if (coaches.length === 0) {
+          safeSet(KEYS.COACHES, INITIAL_COACHES);
+          return INITIAL_COACHES;
+      }
+      return coaches;
+  },
   saveCoach: (coach: Coach) => {
     const list = storageService.getCoaches();
     const idx = list.findIndex(c => c.id === coach.id);
