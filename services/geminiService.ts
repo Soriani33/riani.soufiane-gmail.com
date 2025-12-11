@@ -1,28 +1,28 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Team, Player, MatchResult, Coach, PositionType } from '../types';
 
-// Helpers pour le fallback aléatoire (Mode Hors-Ligne)
-const randomStat = (min = 60, max = 90) => Math.floor(Math.random() * (max - min + 1)) + min;
-const randomRating = () => Math.floor(Math.random() * (92 - 75 + 1)) + 75;
+// Helper pour l'UI
+export const hasApiKey = () => {
+  const key = process.env.API_KEY;
+  return !!key && typeof key === 'string' && key.length > 20 && !key.includes('dummy');
+};
 
-// Fonction de récupération sécurisée du client IA
-// On ne l'instancie que si nécessaire et si la clé existe
+// Fonction de récupération du client IA
 const getAiClient = () => {
   const key = process.env.API_KEY;
-  // Vérification stricte
-  if (!key || typeof key !== 'string' || key.length < 10 || key.includes("dummy")) {
-    // Silent fail ou log léger pour ne pas spammer la console
+  
+  if (!hasApiKey()) {
+    console.warn("⚠️ NANI99: Clé API manquante ou invalide.");
     return null;
   }
+  
   try {
     return new GoogleGenAI({ apiKey: key });
   } catch (error) {
-    console.warn("NANI99 - Erreur d'initialisation SDK:", error);
+    console.error("⚠️ NANI99: Erreur d'initialisation du client Gemini:", error);
     return null;
   }
 };
-
-console.log("NANI99 - Gemini Service Ready (Lazy Mode)");
 
 export const geminiService = {
   
@@ -30,22 +30,14 @@ export const geminiService = {
   generatePlayerInfo: async (name: string): Promise<Partial<Player>> => {
     const ai = getAiClient();
 
-    // Si pas d'IA dispo, on passe direct au fallback sans erreur
     if (!ai) {
-      console.log("Mode Hors-Ligne: Génération aléatoire pour", name);
       return {
-        name: name,
-        rating: randomRating(),
+        name: name + " (Clé API Requise)",
+        rating: 0,
         type: PositionType.MID,
-        position: 'CM',
-        stats: { 
-            pace: randomStat(), 
-            shooting: randomStat(), 
-            passing: randomStat(), 
-            dribbling: randomStat(), 
-            defending: randomStat(), 
-            physical: randomStat() 
-        }
+        position: 'ERR',
+        stats: { pace: 0, shooting: 0, passing: 0, dribbling: 0, defending: 0, physical: 0 },
+        details: { club: "Configuration Manquante", nationality: "N/A" }
       };
     }
 
@@ -92,24 +84,16 @@ export const geminiService = {
       });
       
       const text = response.text;
-      if (!text) throw new Error("Empty response from AI");
+      if (!text) throw new Error("Réponse vide de l'IA");
       return JSON.parse(text);
 
     } catch (error) {
-      console.warn("AI Request Failed (Using Fallback):", error);
+      console.error("Erreur génération joueur:", error);
       return {
         name: name,
-        rating: randomRating(),
-        type: PositionType.MID,
-        position: 'CM',
-        stats: { 
-            pace: randomStat(), 
-            shooting: randomStat(), 
-            passing: randomStat(), 
-            dribbling: randomStat(), 
-            defending: randomStat(), 
-            physical: randomStat() 
-        }
+        rating: 0,
+        stats: { pace: 0, shooting: 0, passing: 0, dribbling: 0, defending: 0, physical: 0 },
+        details: { club: "Erreur API", nationality: "N/A" }
       };
     }
   },
@@ -118,21 +102,18 @@ export const geminiService = {
   generateCoachInfo: async (name: string): Promise<Partial<Coach>> => {
     const ai = getAiClient();
     
-    // Fallback par défaut
-    const fallbackCoach = {
-        name: name,
-        tacticalStyle: ['Offensif', 'Défensif', 'Possession', 'Contre-Attaque'][Math.floor(Math.random()*4)],
-        nationality: 'Internationale'
-    };
-
-    if (!ai) return fallbackCoach;
+    if (!ai) {
+        return {
+            name: name + " (Hors-ligne)",
+            tacticalStyle: "Inconnu (Clé API manquante)",
+            nationality: "N/A"
+        };
+    }
 
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: `Génère un profil d'entraîneur de football réaliste pour "${name}".
-        Détermine son style tactique probable (ex: Gegenpressing, Tiki-Taka, Park the Bus, Équilibré) et sa nationalité.
-        Réponds UNIQUEMENT en JSON.`,
+        contents: `Génère un profil d'entraîneur de football pour "${name}". Style tactique et nationalité. JSON uniquement.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -147,11 +128,10 @@ export const geminiService = {
       });
       
       const text = response.text;
-      if (!text) throw new Error("Empty response from AI");
-      return JSON.parse(text);
+      return text ? JSON.parse(text) : {};
 
     } catch (error) {
-      return fallbackCoach;
+      return { name: name, tacticalStyle: "Erreur" };
     }
   },
 
@@ -161,8 +141,8 @@ export const geminiService = {
     
     if (!ai) {
         return { 
-            score: Math.floor(Math.random() * 3) + 6, 
-            analysis: "Mode Hors-Ligne : Votre formation semble équilibrée. Pour une analyse détaillée par l'IA, veuillez configurer une Clé API valide." 
+            score: 0, 
+            analysis: "⚠️ CONNEXION IMPOSSIBLE : Aucune Clé API Google Gemini détectée. L'application ne peut pas analyser votre équipe." 
         };
     }
 
@@ -175,7 +155,7 @@ export const geminiService = {
         Style du Coach : ${team.coach?.tacticalStyle || 'Inconnu'}.
         Joueurs : ${playersList}.
         
-        Donne une note tactique sur 10 et une courte analyse stratégique (points forts, points faibles, conseils).
+        Donne une note tactique sur 10 et une courte analyse stratégique.
         Réponds en Français.`,
         config: {
           responseMimeType: "application/json",
@@ -190,13 +170,13 @@ export const geminiService = {
       });
 
       const text = response.text;
-      return text ? JSON.parse(text) : { score: 5, analysis: "Erreur d'analyse." };
+      return text ? JSON.parse(text) : { score: 0, analysis: "Erreur de réponse API." };
 
     } catch (error) {
-      console.error("AI Analysis Failed", error);
+      console.error("Erreur analyse:", error);
       return { 
-          score: Math.floor(Math.random() * 3) + 5, 
-          analysis: "L'IA n'a pas pu analyser l'équipe. Vérifiez votre connexion." 
+          score: 0, 
+          analysis: "Erreur lors de l'appel à l'IA. Vérifiez vos quotas ou votre clé API." 
       };
     }
   },
@@ -205,16 +185,15 @@ export const geminiService = {
   simulateMatch: async (home: Team, away: Team): Promise<MatchResult> => {
     const ai = getAiClient();
     
-    // Fallback Simulation
-    const fallbackSim = {
-        scoreHome: Math.floor(Math.random() * 4),
-        scoreAway: Math.floor(Math.random() * 3),
-        summary: "Match simulé en mode hors-ligne. Les deux équipes se sont bien battues.",
-        highlights: [`${Math.floor(Math.random()*20)+10}' Tir dangereux`, `${Math.floor(Math.random()*30)+50}' Contre-attaque rapide`],
-        mvp: home.players[0]?.name || "Le Gardien"
-    };
-
-    if (!ai) return fallbackSim;
+    if (!ai) {
+        return {
+            scoreHome: 0,
+            scoreAway: 0,
+            summary: "⚠️ MATCH ANNULÉ : Clé API manquante. Impossible de simuler le match sans l'intelligence artificielle.",
+            highlights: ["Configurez votre clé API"],
+            mvp: "N/A"
+        };
+    }
 
     try {
       const homeData = JSON.stringify(home.players.map(p => p ? p.name : 'Inconnu'));
@@ -222,12 +201,10 @@ export const geminiService = {
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: `Simule un match de football entre ${home.name} (Domicile) et ${away.name} (Extérieur).
-        Effectif Domicile : ${homeData}. Tactique : ${home.formationName}.
-        Effectif Extérieur : ${awayData}. Tactique : ${away.formationName}.
+        contents: `Simule un match entre ${home.name} et ${away.name}.
+        Effectifs : ${homeData} vs ${awayData}.
         
-        Génère un score réaliste, un résumé vivant du match en Français, 3-5 temps forts avec minutes, et choisis un MVP.
-        Réponds UNIQUEMENT en JSON.`,
+        Génère score, résumé, temps forts, MVP. JSON.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -244,12 +221,18 @@ export const geminiService = {
       });
 
       const text = response.text;
-      if (!text) throw new Error("Empty response from AI");
+      if (!text) throw new Error("Empty response");
       return JSON.parse(text);
 
     } catch (error) {
-      console.error("AI Match Sim Failed", error);
-      return fallbackSim;
+      console.error("Erreur simulation:", error);
+      return {
+          scoreHome: 0,
+          scoreAway: 0,
+          summary: "Erreur technique lors de la simulation.",
+          highlights: [],
+          mvp: "N/A"
+      };
     }
   }
 };

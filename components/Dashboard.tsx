@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Play, Users, Trash2, Edit } from 'lucide-react';
+import { Plus, Play, Users, Trash2, Edit, AlertTriangle } from 'lucide-react';
 import { storageService } from '../services/storageService';
+import { hasApiKey } from '../services/geminiService';
 import { Team } from '../types';
 
 interface DashboardProps {
@@ -10,9 +11,11 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch }) => {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [apiKeyValid, setApiKeyValid] = useState(true);
 
   useEffect(() => {
     setTeams(storageService.getTeams());
+    setApiKeyValid(hasApiKey());
   }, []);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
@@ -24,8 +27,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch }) =
   };
 
   return (
-    <div className="space-y-12 animate-fade-in">
+    <div className="space-y-8 animate-fade-in">
       
+      {!apiKeyValid && (
+        <div className="bg-red-900/50 border border-red-500 rounded-xl p-4 flex items-start gap-4">
+           <div className="bg-red-900 p-2 rounded-full">
+              <AlertTriangle className="text-red-200" size={24} />
+           </div>
+           <div>
+              <h3 className="text-xl font-teko text-white uppercase">Clé API Manquante</h3>
+              <p className="text-gray-300 text-sm">
+                L'intelligence artificielle (Génération de joueurs, Analyse, Matchs) est désactivée. 
+                Veuillez ajouter votre clé Google Gemini dans les réglages de votre déploiement (Vercel &gt; Settings &gt; Environment Variables).
+              </p>
+           </div>
+        </div>
+      )}
+
       {/* Hero Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Builder Card */}
