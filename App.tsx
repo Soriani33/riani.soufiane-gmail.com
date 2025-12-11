@@ -8,9 +8,10 @@ import { DEFAULT_BANNER, DEFAULT_AVATAR } from './constants';
 import Dashboard from './components/Dashboard';
 import TeamBuilder from './components/TeamBuilder';
 import MatchSim from './components/MatchSim';
+import DatabaseView from './components/DatabaseView';
 import ProfileModal from './components/ProfileModal';
 
-type ViewState = 'dashboard' | 'builder' | 'match' | 'profile';
+type ViewState = 'dashboard' | 'builder' | 'match' | 'profile' | 'database';
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewState>('dashboard');
@@ -71,7 +72,13 @@ const App: React.FC = () => {
   const renderView = () => {
     switch(view) {
       case 'dashboard':
-        return <Dashboard onStartBuilder={startBuilder} onStartMatch={() => startMatch()} />;
+        return (
+            <Dashboard 
+                onStartBuilder={startBuilder} 
+                onStartMatch={() => startMatch()} 
+                onOpenDatabase={() => setView('database')}
+            />
+        );
       case 'builder':
         return (
           <TeamBuilder 
@@ -87,8 +94,12 @@ const App: React.FC = () => {
             preselectedHomeId={preselectedHomeTeamId}
           />
         );
+      case 'database':
+        return (
+            <DatabaseView onBack={() => setView('dashboard')} />
+        );
       default:
-        return <Dashboard onStartBuilder={startBuilder} onStartMatch={() => startMatch()} />;
+        return <Dashboard onStartBuilder={startBuilder} onStartMatch={() => startMatch()} onOpenDatabase={() => setView('database')} />;
     }
   };
 
