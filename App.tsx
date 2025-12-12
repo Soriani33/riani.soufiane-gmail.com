@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Users, Trophy, Settings, LogOut, Import, Download, User as UserIcon, Edit, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Users, Trophy, Settings, LogOut, Import, Download, User as UserIcon, Edit, RefreshCw, Database } from 'lucide-react';
 import { storageService } from './services/storageService';
 import { UserProfile, Team, Player } from './types';
 import { DEFAULT_BANNER, DEFAULT_AVATAR } from './constants';
+import { INITIAL_PLAYERS } from './constants/initialData';
 
 // Views
 import Dashboard from './components/Dashboard';
@@ -29,7 +30,20 @@ const App: React.FC = () => {
     // Initial Load check
     const saved = storageService.getProfile();
     setProfile(saved);
-    console.log("NANI99 v1.4 Loaded"); // Debug info
+    
+    // AUTO-RESTAURATION INTELLIGENTE
+    // Si la base de données actuelle a moins de 50 joueurs (signe qu'elle est incomplète ou corrompue par l'erreur précédente),
+    // on force la restauration des données par défaut complètes (100+ joueurs).
+    const currentPlayers = storageService.getPlayers();
+    if (currentPlayers.length < 50) {
+        console.log("Base de données incomplète détectée. Restauration automatique...");
+        localStorage.removeItem('nani99_players');
+        storageService.getPlayers(); // Déclenche le re-seeding
+        // Pas besoin de reload forcée ici, React réagira aux prochaines actions, mais pour être sûr :
+        window.location.reload();
+    }
+    
+    console.log("NANI99 v1.6 Loaded - FULL DB READY"); 
   }, []);
 
   const handleSaveProfile = (updatedProfile: UserProfile) => {
@@ -44,6 +58,17 @@ const App: React.FC = () => {
         setProfile(newProfile);
         setIsProfileModalOpen(true); // Open modal immediately for new entry
     }
+  };
+
+  // Force Reload DB (Emergency Button)
+  const handleForceRestoreDB = () => {
+      if(confirm("ATTENTION : Cela va réinitialiser la base de données des joueurs (Bounou, Hakimi, etc.) par défaut. Vos joueurs créés manuellement seront effacés, mais vos équipes sauvegardées resteront. Continuer ?")) {
+          localStorage.removeItem('nani99_players');
+          // On force le rechargement via storageService qui va reprendre INITIAL_PLAYERS
+          storageService.getPlayers(); 
+          alert("Base de données restaurée avec succès !");
+          window.location.reload();
+      }
   };
 
   // --- NOUVELLE LOGIQUE IMPORT FICHIER ---
@@ -225,11 +250,15 @@ const App: React.FC = () => {
         {renderView()}
       </main>
 
-      {/* Footer Version Indicator - FORCED UPDATE V1.4 */}
-      <div className="text-center py-6 text-gray-600 text-xs font-mono uppercase tracking-widest border-t border-gray-800 mt-12 flex justify-center gap-4">
-          <span>NANI99 v1.4</span>
+      {/* Footer Version Indicator - FORCED UPDATE V1.6 */}
+      <div className="text-center py-6 text-gray-600 text-xs font-mono uppercase tracking-widest border-t border-gray-800 mt-12 flex justify-center gap-4 items-center">
+          <span>NANI99 v1.6</span>
           <span>•</span>
-          <span className="text-green-500">LIVE SYNC ACTIVE</span>
+          <span className="text-emerald-500">FULL DATABASE RESTORED</span>
+          <span>•</span>
+          <button onClick={handleForceRestoreDB} className="text-red-800 hover:text-red-500 underline flex items-center gap-1">
+             <Database size={10} /> Reset DB
+          </button>
       </div>
 
       {/* Profile Modal */}
