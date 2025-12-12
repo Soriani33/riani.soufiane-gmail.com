@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Play, Users, Trash2, AlertTriangle, Database, Briefcase } from 'lucide-react';
+import { Plus, Play, Users, Trash2, AlertTriangle, Database, Briefcase, CheckCircle2 } from 'lucide-react';
 import { storageService } from '../services/storageService';
 import { hasApiKey } from '../services/geminiService';
 import { Team } from '../types';
@@ -12,7 +12,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch, onOpenDatabase }) => {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [apiKeyValid, setApiKeyValid] = useState(true);
+  const [apiKeyValid, setApiKeyValid] = useState(false);
 
   useEffect(() => {
     setTeams(storageService.getTeams());
@@ -30,16 +30,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onStartBuilder, onStartMatch, onO
   return (
     <div className="space-y-8 animate-fade-in">
       
-      {!apiKeyValid && (
+      {/* API Status Banner */}
+      {apiKeyValid ? (
+         <div className="bg-emerald-900/30 border border-emerald-500/30 rounded-lg px-4 py-2 flex items-center justify-between text-xs text-emerald-300">
+            <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} />
+                <span>IA Connectée (Clé API détectée)</span>
+            </div>
+            <span className="opacity-50">Gemini 2.5 Flash Ready</span>
+         </div>
+      ) : (
         <div className="bg-red-900/50 border border-red-500 rounded-xl p-4 flex items-start gap-4">
-           <div className="bg-red-900 p-2 rounded-full">
+           <div className="bg-red-900 p-2 rounded-full flex-shrink-0">
               <AlertTriangle className="text-red-200" size={24} />
            </div>
            <div>
-              <h3 className="text-xl font-teko text-white uppercase">Clé API Manquante</h3>
+              <h3 className="text-xl font-teko text-white uppercase">Clé API Manquante ou Invalide</h3>
               <p className="text-gray-300 text-sm">
-                L'intelligence artificielle (Génération de joueurs, Analyse, Matchs) est désactivée. 
-                Veuillez ajouter votre clé Google Gemini dans les réglages de votre déploiement.
+                L'intelligence artificielle est désactivée. Vérifiez que la variable d'environnement <code>API_KEY</code> est bien définie dans votre configuration (Vercel ou .env) et qu'elle ne contient pas de guillemets superflus.
               </p>
            </div>
         </div>

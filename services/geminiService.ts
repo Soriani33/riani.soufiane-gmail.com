@@ -1,21 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Team, Player, MatchResult, Coach, PositionType } from '../types';
 
-// Helper pour l'UI
-export const hasApiKey = () => {
-  const key = process.env.API_KEY;
-  return !!key && typeof key === 'string' && key.length > 10 && !key.includes('dummy');
-};
-
 // Helper pour nettoyer le JSON retourné par l'IA
 const cleanJsonString = (text: string): string => {
   if (!text) return "{}";
   let clean = text.trim();
   
-  // Enlever les blocs markdown ```json ... ```
-  clean = clean.replace(/^```json/g, '').replace(/^```/g, '').replace(/```$/g, '');
+  // Enlever les blocs markdown ```json ... ``` ou juste ``` ... ```
+  clean = clean.replace(/^```json\s*/, '').replace(/^```\s*/, '').replace(/\s*```$/, '');
   
-  // Chercher le début et la fin du JSON
+  // Chercher le début et la fin du JSON pour ignorer le texte avant/après
   const firstBrace = clean.indexOf('{');
   const lastBrace = clean.lastIndexOf('}');
   
@@ -26,22 +20,37 @@ const cleanJsonString = (text: string): string => {
   return clean;
 };
 
-// Fonction de récupération du client IA
+// Fonction de récupération du client IA avec nettoyage de clé
 const getAiClient = () => {
-  // Accès direct à la variable injectée par Vite
-  const key = process.env.API_KEY;
+  // 1. Récupération
+  let key = process.env.API_KEY;
   
-  if (!key || key.includes('your_api_key_here')) {
-    console.warn("⚠️ NANI99: Clé API manquante ou par défaut.");
+  // 2. Vérification basique
+  if (!key) {
+    console.warn("⚠️ NANI99: Clé API non trouvée dans process.env.API_KEY");
     return null;
+  }
+
+  // 3. Nettoyage agressif (enlève les guillemets doubles/simples accidentels au début/fin)
+  // Ex: '"AIza..."' devient 'AIza...'
+  key = key.trim().replace(/^["']|["']$/g, '');
+
+  if (key.length < 10 || key.includes('your_api_key')) {
+     console.warn("⚠️ NANI99: Clé API invalide ou par défaut détectée.");
+     return null;
   }
   
   try {
     return new GoogleGenAI({ apiKey: key });
   } catch (error) {
-    console.error("⚠️ NANI99: Erreur d'initialisation du client Gemini:", error);
+    console.error("⚠️ NANI99: Crash initialisation SDK:", error);
     return null;
   }
+};
+
+export const hasApiKey = () => {
+  const client = getAiClient();
+  return !!client;
 };
 
 export const geminiService = {
@@ -52,21 +61,21 @@ export const geminiService = {
 
     if (!ai) {
       return {
-        name: name + " (Mode Hors Ligne)",
+        name: name + " (Offline)",
         rating: 75,
         type: PositionType.MID,
         position: 'CM',
         stats: { pace: 70, shooting: 70, passing: 70, dribbling: 70, defending: 70, physical: 70 },
-        details: { club: "Clé API Requise", nationality: "N/A" }
+        details: { club: "Clé API Manquante", nationality: "N/A" }
       };
     }
 
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: `Génère un profil de joueur de football réaliste pour "${name}".
-        Si c'est un joueur connu, utilise des vraies stats FC24/FIFA (1-99).
-        Réponds UNIQUEMENT en JSON valide.`,
+        contents: `Génère un profil de joueur de football pour "${name}".
+        Si joueur connu, vraies stats. Sinon, invente réaliste.
+        Réponds UNIQUEMENT en JSON.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -104,12 +113,11 @@ export const geminiService = {
       });
       
       const text = response.text;
-      if (!text) throw new Error("Réponse vide de l'IA");
-      
+      if (!text) throw new Error("Réponse vide");
       return JSON.parse(cleanJsonString(text));
 
     } catch (error) {
-      console.error("Erreur génération joueur:", error);
+      console.error("Erreur Gen Player:", error);
       return {
         name: name,
         rating: 70,
@@ -129,7 +137,7 @@ export const geminiService = {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: `Génère un profil d'entraîneur pour "${name}". JSON uniquement.`,
+        contents: `Profil coach "${name}". JSON strict.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -146,7 +154,6 @@ export const geminiService = {
       const text = response.text;
       if(!text) throw new Error("Empty");
       return JSON.parse(cleanJsonString(text));
-
     } catch (error) {
       return { name: name, tacticalStyle: "Standard" };
     }
@@ -159,17 +166,17 @@ export const geminiService = {
     if (!ai) {
         return { 
             score: 0, 
-            analysis: "⚠️ Clé API non détectée. Vérifiez vos variables d'environnement Vercel (API_KEY)." 
+            analysis: "⚠️ ERREUR: Clé API non détectée ou invalide. Vérifiez vos variables d'environnement (API_KEY)." 
         };
     }
 
     try {
-      const playersList = team.players.map((p, i) => p ? `${p.position} (${p.rating}): ${p.name}` : `Pos ${i+1}: Vide`).join(', ');
+      const playersList = team.players.map((p, i) => p ? `${p.position}: ${p.name} (${p.rating})` : `Pos ${i+1}: Vide`).join(', ');
       
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: `Analyse cette formation de football : ${team.formationName}. Coach: ${team.coach?.tacticalStyle || 'Inconnu'}. Joueurs: ${playersList}.
-        Donne une note sur 10 (score) et une analyse tactique courte en Français.`,
+        contents: `Analyse tactique football. Formation: ${team.formationName}. Coach: ${team.coach?.name} (${team.coach?.tacticalStyle}). Joueurs: ${playersList}.
+        Note /10 et analyse courte en français.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -183,17 +190,21 @@ export const geminiService = {
       });
 
       const text = response.text;
-      if (!text) throw new Error("L'IA a renvoyé une réponse vide.");
+      if (!text) throw new Error("Réponse vide de l'IA");
       
       return JSON.parse(cleanJsonString(text));
 
     } catch (error: any) {
-      console.error("Erreur analyse:", error);
-      // Retourner le message d'erreur réel pour le débogage UI
-      const msg = error.message || JSON.stringify(error);
+      console.error("Erreur Analyse:", error);
+      // Extraction du message d'erreur réel pour l'utilisateur
+      let msg = "Erreur inconnue";
+      if (error instanceof Error) msg = error.message;
+      else if (typeof error === 'string') msg = error;
+      else msg = JSON.stringify(error);
+
       return { 
         score: 0, 
-        analysis: `Erreur Technique IA : ${msg}. Vérifiez que l'API "Gemini API" est bien activée sur votre projet Google Cloud et que la clé est valide.` 
+        analysis: `❌ ÉCHEC IA: ${msg}. (Vérifiez la console F12 pour plus de détails)` 
       };
     }
   },
@@ -204,23 +215,26 @@ export const geminiService = {
     
     if (!ai) {
         return {
-            scoreHome: 0,
-            scoreAway: 0,
-            summary: "API Manquante. Impossible de simuler.",
-            highlights: [],
-            mvp: "N/A"
+            scoreHome: 0, scoreAway: 0,
+            summary: "Clé API manquante. Simulation impossible.",
+            highlights: [], mvp: "N/A"
         };
     }
 
     try {
-      const homeData = JSON.stringify(home.players.map(p => p ? `${p.name} (${p.rating})` : 'Inconnu'));
-      const awayData = JSON.stringify(away.players.map(p => p ? `${p.name} (${p.rating})` : 'Inconnu'));
+      // Simplification des données envoyées pour économiser des tokens et éviter les erreurs de parsing
+      const formatTeam = (t: Team) => ({
+          name: t.name,
+          formation: t.formationName,
+          players: t.players.map(p => p ? `${p.name} (${p.rating})` : "Inconnu")
+      });
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: `Simule un match de foot: ${home.name} vs ${away.name}.
-        Home Players: ${homeData}. Away Players: ${awayData}.
-        Renvoie un JSON avec: scoreHome, scoreAway, summary (résumé en français), highlights (liste actions), mvp.`,
+        contents: `Simule match foot.
+        Home: ${JSON.stringify(formatTeam(home))}.
+        Away: ${JSON.stringify(formatTeam(away))}.
+        JSON uniquement: scoreHome, scoreAway, summary (français), highlights (array string), mvp.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -241,11 +255,11 @@ export const geminiService = {
       return JSON.parse(cleanJsonString(text));
 
     } catch (error: any) {
-      console.error("Erreur simulation:", error);
+      console.error("Erreur Sim:", error);
       return {
           scoreHome: 0,
           scoreAway: 0,
-          summary: `Erreur de simulation : ${error.message || 'Inconnue'}.`,
+          summary: `Erreur Technique: ${error.message || JSON.stringify(error)}`,
           highlights: [],
           mvp: "Erreur"
       };
