@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, Save, Sparkles, User, RefreshCw, Shirt, Image as ImageIcon, Plus, Wand2, Swords, Camera, Download, Users, X } from 'lucide-react';
+import { ChevronLeft, Save, Sparkles, User, RefreshCw, Shirt, Image as ImageIcon, Plus, Wand2, Swords, Camera, Download, Users, X, AlertOctagon } from 'lucide-react';
 // @ts-ignore
 import html2canvas from 'html2canvas';
 import { Team, Player, Formation, Coach } from '../types';
@@ -89,16 +89,13 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
       setIsExporting(true);
       
       try {
-          // Add a small delay to ensure rendering is stable
           await new Promise(resolve => setTimeout(resolve, 100));
-
           const canvas = await html2canvas(exportAreaRef.current, {
-              backgroundColor: '#111827', // Dark background
-              useCORS: true, // Crucial for external images (avatars)
-              allowTaint: false, // Must be false to allow data URL generation
-              scale: 2, // Better quality
+              backgroundColor: '#111827',
+              useCORS: true,
+              allowTaint: false,
+              scale: 2,
           });
-
           const image = canvas.toDataURL("image/jpeg", 0.9);
           const link = document.createElement('a');
           link.download = `NANI99-${teamName.replace(/\s+/g, '-')}.jpg`;
@@ -106,7 +103,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
           link.click();
       } catch (err) {
           console.error("Export failed", err);
-          alert("Erreur lors de l'exportation de l'image. Vérifiez que les images (avatars) autorisent le partage (CORS).");
+          alert("Erreur export image. Vérifiez les droits CORS des images.");
       } finally {
           setIsExporting(false);
       }
@@ -122,14 +119,11 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
     setIsAnalyzing(false);
   };
 
-  // Click on Pitch Logic
   const handleSlotClick = (index: number) => {
     setSelectedSlot(index);
     if (players[index]) {
-      // If player exists -> Detail View
       setIsDetailModalOpen(true);
     } else {
-      // If empty -> Selection View
       setIsSelectionModalOpen(true);
     }
   };
@@ -141,7 +135,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
     setPlayers(newPlayers);
   };
 
-  // Remove player from Pitch (only)
   const handleRemovePlayer = () => {
     if (selectedSlot === null) return;
     const newPlayers = [...players];
@@ -150,7 +143,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
     setIsDetailModalOpen(false);
   };
 
-  // Update specific player instance on Pitch
   const handleUpdatePlayer = (updatedPlayer: Player) => {
     if (selectedSlot === null) return;
     const newPlayers = [...players];
@@ -185,12 +177,11 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
               <Swords size={20} /> <span className="hidden md:inline">MATCH</span>
             </button>
         </div>
-       
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
         
-        {/* Left Column: Settings */}
+        {/* Left Column */}
         <div className="lg:col-span-3 space-y-6">
           <div className="glass-panel p-6 rounded-xl">
             <h3 className="text-xl font-teko text-emerald-400 mb-4 flex items-center gap-2"><Shirt size={20} /> Tactiques</h3>
@@ -244,7 +235,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
 
           <div className="glass-panel p-6 rounded-xl">
             <h3 className="text-xl font-teko text-yellow-400 mb-4 flex items-center gap-2"><User size={20} /> Coach</h3>
-            
             {coach ? (
                <div className="flex items-center gap-3 animate-fade-in bg-gray-800/50 p-2 rounded-lg border border-gray-700">
                  <div className="w-14 h-14 flex-shrink-0 rounded-full bg-gray-700 overflow-hidden border-2 border-yellow-500">
@@ -271,16 +261,11 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
           </div>
         </div>
 
-        {/* Center Column: Pitch - WRAPPED IN EXPORT REF */}
+        {/* Center Column: Pitch */}
         <div className="lg:col-span-6 flex flex-col items-center">
-            
-            {/* Capture Area */}
             <div ref={exportAreaRef} className="w-full max-w-xl flex flex-col items-center p-4 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 rounded-2xl">
-                {/* Logo Shield - Classic Football Crest Design */}
                 <div className="relative mb-6 group animate-fade-in-down">
-                    <div 
-                        className="w-40 h-48 bg-gradient-to-b from-gray-800 to-gray-950 rounded-b-[4rem] shadow-2xl relative z-10 overflow-hidden flex items-center justify-center border-[3px] border-yellow-500/60"
-                    >
+                    <div className="w-40 h-48 bg-gradient-to-b from-gray-800 to-gray-950 rounded-b-[4rem] shadow-2xl relative z-10 overflow-hidden flex items-center justify-center border-[3px] border-yellow-500/60">
                         {logoUrl ? (
                             <img src={logoUrl} className="w-full h-full object-cover scale-105" onError={(e) => e.currentTarget.style.display='none'} />
                         ) : (
@@ -290,12 +275,10 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
                             </div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none"></div>
-                        <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] pointer-events-none rounded-b-[4rem]"></div>
                     </div>
                     <div className="absolute top-4 left-4 w-32 h-36 bg-yellow-500/20 blur-[40px] -z-10 rounded-full"></div>
                 </div>
 
-                {/* Team Name Display for Export */}
                 <h2 className="font-teko text-4xl text-white mb-4 uppercase tracking-wider drop-shadow-lg">{teamName}</h2>
 
                 <div className="w-full">
@@ -310,7 +293,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
                      <p className="text-gray-500 text-xs font-teko uppercase tracking-widest">Généré avec NANI99</p>
                 </div>
             </div>
-
         </div>
 
         {/* Right Column: AI Analysis */}
@@ -322,7 +304,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
             
             {!aiAnalysis ? (
                <div className="text-center py-10">
-                 <p className="text-gray-400 mb-6">Complétez votre équipe et demandez un rapport tactique à l'IA.</p>
+                 <p className="text-gray-400 mb-6">Complétez votre équipe et demandez un rapport tactique.</p>
                  <button 
                   onClick={handleAnalyze}
                   disabled={isAnalyzing}
@@ -331,7 +313,7 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
                    {isAnalyzing ? 'Analyse en cours...' : 'ANALYSER FORMATION'}
                  </button>
                </div>
-            ) : (
+            ) : aiAnalysis.score > 0 ? (
                <div className="animate-fade-in">
                  <div className="flex items-center justify-between mb-4 border-b border-gray-700 pb-4">
                    <span className="text-gray-300">Note Tactique</span>
@@ -344,12 +326,40 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
                     <RefreshCw size={14} /> Re-analyser
                  </button>
                </div>
+            ) : (
+                // MODE ERREUR SPÉCIFIQUE
+                <div className="bg-red-900/40 border border-red-500/50 rounded-lg p-4 animate-fade-in">
+                    <div className="flex items-start gap-3 mb-3">
+                        <AlertOctagon className="text-red-400 shrink-0" size={24} />
+                        <h4 className="font-bold text-red-100">Erreur Configuration IA</h4>
+                    </div>
+                    
+                    {aiAnalysis.analysis.includes("API key not valid") || aiAnalysis.analysis.includes("400") ? (
+                         <div className="text-sm text-red-200 space-y-2">
+                             <p><strong>Clé API Invalide.</strong></p>
+                             <p>Il semble que la clé dans Vercel soit incorrecte.</p>
+                             <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300">
+                                 <li>Allez sur Vercel &gt; Settings &gt; Environment Variables.</li>
+                                 <li>Vérifiez que <code>API_KEY</code> ne contient <strong>pas</strong> de guillemets autour (ex: juste <code>AIza...</code>).</li>
+                                 <li>Vérifiez que vous n'avez pas collé <code>API_KEY=...</code> dans la valeur.</li>
+                                 <li>Redéployez le projet.</li>
+                             </ul>
+                         </div>
+                    ) : aiAnalysis.analysis === "ERR_NO_KEY" ? (
+                        <p className="text-sm text-red-200">Aucune clé API détectée. Ajoutez <code>API_KEY</code> dans Vercel.</p>
+                    ) : (
+                        <p className="text-sm text-red-200 break-words">{aiAnalysis.analysis}</p>
+                    )}
+                    
+                    <button onClick={handleAnalyze} className="mt-4 w-full bg-red-800 hover:bg-red-700 text-white text-sm py-2 rounded">
+                        Réessayer
+                    </button>
+                </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Modal Selection (Pool) */}
       <PlayerModal 
         isOpen={isSelectionModalOpen}
         onClose={() => setIsSelectionModalOpen(false)}
@@ -358,7 +368,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
         requiredType={selectedSlot === 0 ? 'GK' as any : undefined} 
       />
 
-      {/* Modal Details (View/Edit/Remove) */}
       <PlayerDetailModal 
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
@@ -367,7 +376,6 @@ const TeamBuilder: React.FC<TeamBuilderProps> = ({ teamId, onBack, onGoToMatch }
         onUpdate={handleUpdatePlayer}
       />
 
-      {/* Modal Coach Selection */}
       <CoachSelectionModal 
         isOpen={isCoachSelectionOpen}
         onClose={() => setIsCoachSelectionOpen(false)}
