@@ -9,9 +9,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // On rend accessible la clé via process.env pour la compatibilité, 
-      // mais on préférera import.meta.env.VITE_API_KEY dans le code moderne.
-      'process.env.API_KEY': JSON.stringify(env.API_KEY || env.VITE_API_KEY)
+      // Remplacement sécurisé des variables
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || env.VITE_API_KEY),
+      // Important pour éviter "process is not defined" dans certaines libs
+      'process.env': {}
     },
     build: {
       target: 'esnext'
